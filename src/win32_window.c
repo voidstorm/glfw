@@ -884,7 +884,6 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 
             break;
         }
-
         case WM_EXITSIZEMOVE:
         {
             _glfwInputWindowSizeExit(window, window->win32.width, window->win32.height);
@@ -914,14 +913,23 @@ static LRESULT CALLBACK windowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
                 (window->win32.maximized &&
                     wParam != SIZE_RESTORED);
 
-            const int restored = (wParam == SIZE_RESTORED);
+            int restored = (wParam == SIZE_RESTORED);
+
+            //check if we went fullscreen
+            long windowStyle = GetWindowLong(window->win32.handle, GWL_STYLE);
+            if (windowStyle == 0x16000000) {
+                window->win32.width = width;
+                window->win32.height = height;
+                _glfwInputWindowSizeExit(window, window->win32.width, window->win32.height);
+            }
+
             if (_glfw.win32.capturedCursorWindow == window)
                 captureCursor(window);
 
             if (window->win32.iconified != iconified)
                 _glfwInputWindowIconify(window, iconified);
 
-            if (window->win32.maximized != maximized || (window->win32.maximized == maximized && restored)) {
+            if (maximized || (window->win32.maximized && restored)) {
                 window->win32.width = width;
                 window->win32.height = height;
                 _glfwInputWindowMaximize(window, maximized);
@@ -1185,7 +1193,7 @@ static int createNativeWindow(_GLFWwindow* window,
                 "Win32: Failed to register window class");
             return GLFW_FALSE;
         }
-    }
+}
 
     if (window->monitor) {
         MONITORINFO mi = {sizeof(mi)};
